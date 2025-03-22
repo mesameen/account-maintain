@@ -2,14 +2,15 @@ package accountModuleDto
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	errorHelpers "go-gin-test-job/src/common/error-helpers"
 	errorMessages "go-gin-test-job/src/common/error-messages"
 	"go-gin-test-job/src/common/validations"
 	"go-gin-test-job/src/database/entities"
 	stringUtil "go-gin-test-job/src/utils/string"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 const DEFAULT_ACCOUNT_COUNT = 100
@@ -18,6 +19,8 @@ const DEFAULT_ACCOUNT_OFFSET = 0
 var GetAvailableAccountSortField = map[string]string{
 	"id":         "account.id",
 	"updated_at": "account.updated_at",
+	"address":    "account.address",
+	"name":       "acount.name",
 }
 
 var GetAvailableAccountSortFieldList = func() []string {
@@ -28,11 +31,26 @@ var GetAvailableAccountSortFieldList = func() []string {
 	return keys
 }()
 
+var GetAvailableAccountSearchField = map[string]string{
+	"address": "",
+	"name":    "",
+	"memo":    "",
+}
+
+var GetAvailableAccountSearchFieldList = func() []string {
+	keys := make([]string, 0, len(GetAvailableAccountSearchField))
+	for key := range GetAvailableAccountSearchField {
+		keys = append(keys, key)
+	}
+	return keys
+}()
+
 type GetAccountRequestDto struct {
 	Offset  int                    `form:"offset" json:"offset" validate:"min=0" default:"0" example:"5"`
 	Count   int                    `form:"count" json:"count" validate:"min=1,max=100" default:"100" example:"20"`
 	Status  entities.AccountStatus `form:"status" json:"status" validate:"omitempty,AccountStatusValidation" example:"On"`
 	OrderBy string                 `form:"orderBy" json:"orderBy" validate:"omitempty,max=255" example:"id ASC"`
+	Search  string                 `form:"search" json:"search" example:"address 1JzfdUygUFk2M6KS3ngFMGRsy5vsH4N37k"`
 }
 
 var getAccountRequestDtoValidator *validator.Validate

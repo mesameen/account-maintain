@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"go-gin-test-job/src/database/entities"
+
 	"gorm.io/gorm"
 )
 
@@ -22,13 +23,16 @@ func getDb(tx *gorm.DB) *gorm.DB {
 
 ///// Account queries
 
-func GetAccountsAndTotal(status entities.AccountStatus, orderParams map[string]string, offset int, count int) ([]*entities.Account, int64) {
+func GetAccountsAndTotal(status entities.AccountStatus, orderParams map[string]string, offset int, count int, searchParams map[string]string) ([]*entities.Account, int64) {
 	var total int64
 	var accounts []*entities.Account
 	query := getBaseAccountsQuery(status)
 	totalQuery := getBaseAccountsQuery(status)
 	for key, value := range orderParams {
 		query = query.Order(fmt.Sprintf("account.%s %s", key, value))
+	}
+	for key, value := range searchParams {
+		query = query.Where(fmt.Sprintf("account.%s LIKE ?", key), value)
 	}
 	query.
 		Limit(count).

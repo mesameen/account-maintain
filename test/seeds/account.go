@@ -1,9 +1,10 @@
 package seeds
 
 import (
-	"github.com/shopspring/decimal"
 	"go-gin-test-job/src/database/entities"
 	timeUtil "go-gin-test-job/src/utils/time"
+
+	"github.com/shopspring/decimal"
 )
 
 var ACCOUNTS struct {
@@ -21,6 +22,8 @@ func FillAccountList() []entities.Account {
 		Status:    entities.AccountStatusOn,
 		CreatedAt: timeUtil.GetUnixTime(),
 		UpdatedAt: timeUtil.GetUnixTime(),
+		Name:      "account-1",
+		Ranking:   2,
 	}
 	ACCOUNTS.ACCOUNT_2 = entities.Account{
 		Id:        2,
@@ -29,6 +32,8 @@ func FillAccountList() []entities.Account {
 		Status:    entities.AccountStatusOn,
 		CreatedAt: timeUtil.GetUnixTime(),
 		UpdatedAt: timeUtil.GetUnixTime(),
+		Name:      "account-2",
+		Ranking:   3,
 	}
 	ACCOUNTS.ACCOUNT_3 = entities.Account{
 		Id:        3,
@@ -37,6 +42,8 @@ func FillAccountList() []entities.Account {
 		Status:    entities.AccountStatusOff,
 		CreatedAt: timeUtil.GetUnixTime(),
 		UpdatedAt: timeUtil.GetUnixTime(),
+		Name:      "account-3",
+		Ranking:   3,
 	}
 	ACCOUNTS.ACCOUNT_4 = entities.Account{
 		Id:        4,
@@ -45,6 +52,8 @@ func FillAccountList() []entities.Account {
 		Status:    entities.AccountStatusOff,
 		CreatedAt: timeUtil.GetUnixTime(),
 		UpdatedAt: timeUtil.GetUnixTime(),
+		Name:      "account-4",
+		Ranking:   3,
 	}
 	return []entities.Account{
 		ACCOUNTS.ACCOUNT_1,

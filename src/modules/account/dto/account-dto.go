@@ -11,6 +11,9 @@ type AccountDto struct {
 	Status    string `json:"status" example:"On"`
 	CreatedAt int64  `json:"created_at" example:"1600000000000"`
 	UpdatedAt int64  `json:"updated_at" example:"1600000000000"`
+	Name      string `json:"name" example:"account-1"`
+	Ranking   uint8  `json:"ranking" example:"24"`
+	Memo      string `json:"memo" example:"memo1"`
 }
 
 func CreateAccountDto(account *entities.Account) AccountDto {
@@ -21,5 +24,8 @@ func CreateAccountDto(account *entities.Account) AccountDto {
 		Status:    string(account.Status),
 		CreatedAt: account.CreatedAt,
 		UpdatedAt: account.UpdatedAt,
+		Name:      account.Name,
+		Ranking:   account.Ranking,
+		Memo:      account.Memo,
 	}
 }

@@ -7,7 +7,7 @@ CREATE TABLE account (
     created_at INT NOT NULL,
     updated_at INT NOT NULL,
     name VARCHAR(255) NOT NULL,
-    rank TINYINT UNSIGNED NOT NULL CHECK (rank < 101),
+    ranking TINYINT UNSIGNED NOT NULL CHECK (ranking < 101),
     memo TEXT,
     PRIMARY KEY (id),
     UNIQUE INDEX account_address_unique_idx (address),

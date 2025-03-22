@@ -1,8 +1,9 @@
 package entities
 
 import (
-	"github.com/shopspring/decimal"
 	timeUtils "go-gin-test-job/src/utils/time"
+
+	"github.com/shopspring/decimal"
 )
 
 const AccountTable = "account"
@@ -23,6 +24,9 @@ type Account struct {
 	Status    AccountStatus   `json:"status" gorm:"index:account_status_idx;type:enum('On','Off');not null"`
 	CreatedAt int64           `json:"created_at" gorm:"autoCreateTime;not null"`
 	UpdatedAt int64           `json:"updated_at" gorm:"autoUpdateTime;index:account_updated_at_idx;not null"`
+	Name      string          `json:"name" gorm:"name;not null"`
+	Ranking   uint8           `json:"ranking" gorm:"ranking;not null"`
+	Memo      string          `json:"memo"`
 }
 
 // Set the table name for the model

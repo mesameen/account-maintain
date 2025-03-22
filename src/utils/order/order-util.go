@@ -2,9 +2,10 @@ package orderUtil
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	errorHelpers "go-gin-test-job/src/common/error-helpers"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 var AvailableSortOrderList = map[string]bool{

@@ -1,9 +1,11 @@
 package accountModule
 
 import (
-	"github.com/gin-gonic/gin"
 	accountModuleDto "go-gin-test-job/src/modules/account/dto"
 	orderUtil "go-gin-test-job/src/utils/order"
+	searchUtil "go-gin-test-job/src/utils/search"
+
+	"github.com/gin-gonic/gin"
 )
 
 // GetAccounts Get list of accounts
@@ -16,6 +18,7 @@ import (
 // @Param count query int false "Max item count in single response. 100 by default" minimum(1) maximum(100) default(100)
 // @Param status query string false "Account statuses: On, Off" Enums("On", "Off") default("On")
 // @Param orderBy query string false "Comma-separated sort order options (sort fields: id, updated, sort order: ASC,DESC)" default(id ASC)
+// @Param search query string false "Comma-separated search options (search fields: address, name, rank) Eg: name william"
 // @Param X-API-Key header string true "Admin api key"
 // @Success 200 {object} accountModuleDto.GetAccountResponseDto
 // @Failure 400 {object} errorHelpers.ResponseBadRequestErrorHTTP{}
@@ -30,7 +33,11 @@ func GetAccounts(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	accounts, total := getAccounts(dto.Status, orderParams, dto.Offset, dto.Count)
+	searchParams, err := searchUtil.GetSearchByParams(c, dto.Search, ",", accountModuleDto.GetAvailableAccountSearchFieldList)
+	if err != nil {
+		return
+	}
+	accounts, total := getAccounts(dto.Status, orderParams, dto.Offset, dto.Count, searchParams)
 	c.JSON(200, accountModuleDto.CreateGetAccountResponseDto(dto.Offset, dto.Count, total, accounts))
 }
 
@@ -52,7 +59,7 @@ func CreateAccount(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	account, err := createAccount(c, dto.Address, dto.Status)
+	account, err := createAccount(c, &dto)
 	if err != nil {
 		return
 	}

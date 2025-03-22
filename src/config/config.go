@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"go-gin-test-job/src/logger"
 	typeUtil "go-gin-test-job/src/utils/type"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type DbConnectionConfig struct {
@@ -90,7 +91,7 @@ func LoadConfig() {
 		Database: DbConfig{
 			Dsn:        dbDns,
 			Connection: defaultDbConnection,
-			Logging:    false,
+			Logging:    true,
 		},
 		TestDatabase: TestDbConfig{
 			Host:       testDbHost,

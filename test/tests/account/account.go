@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	errorHelpers "go-gin-test-job/src/common/error-helpers"
 	"go-gin-test-job/src/config"
 	"go-gin-test-job/src/database"
@@ -13,6 +12,7 @@ import (
 	arrayUtil "go-gin-test-job/src/utils/array"
 	numberUtil "go-gin-test-job/src/utils/number"
 	orderUtil "go-gin-test-job/src/utils/order"
+	searchUtil "go-gin-test-job/src/utils/search"
 	timeUtil "go-gin-test-job/src/utils/time"
 	"go-gin-test-job/test"
 	"go-gin-test-job/test/seeds"
@@ -21,6 +21,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAccountRoute(t *testing.T) {
@@ -81,6 +83,18 @@ func validationGetAccountsTests(t *testing.T) {
 			http.StatusBadRequest,
 			errorHelpers.ResponseBadRequestErrorHTTP{Success: false, Message: "OrderBy must be shorter than or equal to 255 characters"},
 		},
+		{
+			"FailInvalidSearchByWrongColumnOrValue",
+			accountModuleDto.GetAccountRequestDto{Search: "col"},
+			http.StatusBadRequest,
+			errorHelpers.ResponseBadRequestErrorHTTP{Success: false, Message: "invalid search parameter: col"},
+		},
+		{
+			"FailInvalidSearchByUnsupportedColumn",
+			accountModuleDto.GetAccountRequestDto{Search: "col 123"},
+			http.StatusBadRequest,
+			errorHelpers.ResponseBadRequestErrorHTTP{Success: false, Message: "unsupported column (col) to search."},
+		},
 	}
 	for _, validationTest := range validationTests {
 		t.Run("TestGetAccountsRoute"+validationTest.name, func(t *testing.T) {
@@ -89,12 +103,14 @@ func validationGetAccountsTests(t *testing.T) {
 				Offset  int                    `json:"offset"`
 				Status  entities.AccountStatus `json:"status"`
 				OrderBy string                 `json:"orderBy"`
+				Search  string                 `json:"search"`
 			}
 			params := &Params{
 				Count:   validationTest.params.Count,
 				Offset:  validationTest.params.Offset,
 				Status:  validationTest.params.Status,
 				OrderBy: validationTest.params.OrderBy,
+				Search:  validationTest.params.Search,
 			}
 
 			query := url.Values{}
@@ -102,6 +118,7 @@ func validationGetAccountsTests(t *testing.T) {
 			query.Add("offset", numberUtil.IntToString(params.Offset))
 			query.Add("status", string(params.Status))
 			query.Add("orderBy", params.OrderBy)
+			query.Add("search", params.Search)
 
 			u := &url.URL{
 				Path:     fmt.Sprintf("/account"),
@@ -133,7 +150,7 @@ func TestGetAccountsRoute_SuccessNoParams(t *testing.T) {
 		Path: fmt.Sprintf("/account"),
 	}
 
-	accounts, total := database.GetAccountsAndTotal("", make(map[string]string), accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT)
+	accounts, total := database.GetAccountsAndTotal("", make(map[string]string), accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT, make(map[string]string))
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", u.String(), nil)
@@ -186,7 +203,7 @@ func TestGetAccountsRoute_SuccessParamsOffsetAndCount(t *testing.T) {
 		RawQuery: query.Encode(),
 	}
 
-	accounts, total := database.GetAccountsAndTotal("", make(map[string]string), params.Offset, params.Count)
+	accounts, total := database.GetAccountsAndTotal("", make(map[string]string), params.Offset, params.Count, make(map[string]string))
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", u.String(), nil)
@@ -236,7 +253,7 @@ func TestGetAccountsRoute_SuccessParamsStatus(t *testing.T) {
 		RawQuery: query.Encode(),
 	}
 
-	accounts, total := database.GetAccountsAndTotal(params.Status, make(map[string]string), accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT)
+	accounts, total := database.GetAccountsAndTotal(params.Status, make(map[string]string), accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT, make(map[string]string))
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", u.String(), nil)
@@ -287,7 +304,7 @@ func TestGetAccountsRoute_SuccessParamsOrderBy(t *testing.T) {
 	}
 
 	orderParams, err := orderUtil.GetOrderByParamsSecure(nil, params.OrderBy, ",", accountModuleDto.GetAvailableAccountSortFieldList)
-	accounts, total := database.GetAccountsAndTotal("", orderParams, accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT)
+	accounts, total := database.GetAccountsAndTotal("", orderParams, accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT, make(map[string]string))
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", u.String(), nil)
@@ -343,7 +360,7 @@ func TestGetAccountsRoute_SuccessParamsStatusAndOrderBy(t *testing.T) {
 	}
 
 	orderParams, err := orderUtil.GetOrderByParamsSecure(nil, params.OrderBy, ",", accountModuleDto.GetAvailableAccountSortFieldList)
-	accounts, total := database.GetAccountsAndTotal(params.Status, orderParams, accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT)
+	accounts, total := database.GetAccountsAndTotal(params.Status, orderParams, accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT, make(map[string]string))
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", u.String(), nil)
@@ -405,7 +422,7 @@ func TestGetAccountsRoute_SuccessParamsOffsetAndCountAndStatusAndOrderBy(t *test
 	}
 
 	orderParams, err := orderUtil.GetOrderByParamsSecure(nil, params.OrderBy, ",", accountModuleDto.GetAvailableAccountSortFieldList)
-	accounts, total := database.GetAccountsAndTotal(params.Status, orderParams, params.Offset, params.Count)
+	accounts, total := database.GetAccountsAndTotal(params.Status, orderParams, params.Offset, params.Count, make(map[string]string))
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", u.String(), nil)
@@ -441,6 +458,58 @@ func TestGetAccountsRoute_SuccessParamsOffsetAndCountAndStatusAndOrderBy(t *test
 	assert.Equal(t, true, test.TestListSort(responseDto.List, params.OrderBy), "List is not sorted")
 }
 
+func TestGetAccountsRoute_SuccessParamsSearch(t *testing.T) {
+	type Params struct {
+		Search string `json:"search"`
+	}
+	params := &Params{
+		Search: "name william",
+	}
+
+	query := url.Values{}
+	query.Add("search", params.Search)
+
+	u := &url.URL{
+		Path:     "/account",
+		RawQuery: query.Encode(),
+	}
+
+	searchParams, err := searchUtil.GetSearchByParams(nil, params.Search, ",", accountModuleDto.GetAvailableAccountSearchFieldList)
+	assert.Nil(t, err)
+	accounts, total := database.GetAccountsAndTotal("", make(map[string]string), accountModuleDto.DEFAULT_ACCOUNT_OFFSET, accountModuleDto.DEFAULT_ACCOUNT_COUNT, searchParams)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", u.String(), nil)
+	request.Header.Set("X-API-Key", config.AppConfig.AdminXApiKey)
+	test.TestApp.ServeHTTP(response, request)
+	assert.Equal(t, http.StatusOK, response.Code)
+
+	// Read the response body and parse JSON
+	var responseDto accountModuleDto.GetAccountResponseDto
+	err = json.NewDecoder(response.Body).Decode(&responseDto)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, responseDto.Offset, "Offset parameter should exist")
+	assert.NotNil(t, responseDto.Count, "Count parameter should exist")
+	assert.NotNil(t, responseDto.Total, "Total parameter should exist")
+	assert.NotNil(t, responseDto.List, "List parameter should exist")
+
+	assert.Equal(t, accountModuleDto.DEFAULT_ACCOUNT_OFFSET, responseDto.Offset)
+	assert.Equal(t, accountModuleDto.DEFAULT_ACCOUNT_COUNT, responseDto.Count)
+	assert.Equal(t, total, responseDto.Total)
+	assert.Equal(t, len(accounts), len(responseDto.List))
+
+	for _, accountDto := range responseDto.List {
+		conditions := []func(account *entities.Account) bool{
+			func(a *entities.Account) bool {
+				return a.Id == accountDto.Id
+			},
+		}
+		account := arrayUtil.FindItem(accounts, conditions)
+		test.CompareAccount(t, *account, accountDto)
+	}
+}
+
 func validationCreateAccountTests(t *testing.T) {
 	validationTests := []struct {
 		name         string
@@ -466,16 +535,32 @@ func validationCreateAccountTests(t *testing.T) {
 			http.StatusBadRequest,
 			errorHelpers.ResponseBadRequestErrorHTTP{Success: false, Message: fmt.Sprintf("%s must be one of the next values: %s", "Status", strings.Join(entities.AccountStatusList, ","))},
 		},
+		{
+			"FailInvalidName",
+			accountModuleDto.PostCreateAccountRequestDto{Address: "14yqg2y3a6HMgW9MiF5tVPAH4Dr1uxGKFJ", Status: "On"},
+			http.StatusBadRequest,
+			errorHelpers.ResponseBadRequestErrorHTTP{Success: false, Message: "Name is invalid"},
+		},
+		{
+			"FailInvalidRanking",
+			accountModuleDto.PostCreateAccountRequestDto{Address: "14yqg2y3a6HMgW9MiF5tVPAH4Dr1uxGKFJ", Status: "On", Name: "Ryan Mike"},
+			http.StatusBadRequest,
+			errorHelpers.ResponseBadRequestErrorHTTP{Success: false, Message: "Ranking is invalid"},
+		},
 	}
 	for _, validationTest := range validationTests {
 		t.Run("TestCreateAccountRoute"+validationTest.name, func(t *testing.T) {
 			type Params struct {
 				Address string                 `json:"address"`
 				Status  entities.AccountStatus `json:"status"`
+				Name    string                 `json:"name"`
+				Ranking *uint8                 `json:"ranking"`
 			}
 			params := &Params{
 				Address: validationTest.params.Address,
 				Status:  validationTest.params.Status,
+				Name:    validationTest.params.Name,
+				Ranking: validationTest.params.Ranking,
 			}
 			body, _ := json.Marshal(params)
 
@@ -509,10 +594,14 @@ func TestCreateAccountRoute_FailAddressAlreadyExists(t *testing.T) {
 	type Params struct {
 		Address string                 `json:"address"`
 		Status  entities.AccountStatus `json:"status"`
+		Name    string                 `json:"name"`
+		Ranking uint8                  `json:"ranking"`
 	}
 	params := &Params{
 		Address: accountInfo.Address,
 		Status:  entities.AccountStatusOn,
+		Name:    accountInfo.Name,
+		Ranking: accountInfo.Ranking,
 	}
 	body, _ := json.Marshal(params)
 
@@ -546,10 +635,14 @@ func TestCreateAccountRoute_Success(t *testing.T) {
 	type Params struct {
 		Address string                 `json:"address"`
 		Status  entities.AccountStatus `json:"status"`
+		Name    string                 `json:"name"`
+		Ranking uint8                  `json:"ranking"`
 	}
 	params := &Params{
 		Address: "32AaKxGbdhGMSGutcZjspFq9U89jJHW1um",
 		Status:  entities.AccountStatusOn,
+		Name:    "John Wills",
+		Ranking: 34,
 	}
 	body, _ := json.Marshal(params)
 
